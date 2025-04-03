@@ -1,203 +1,178 @@
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
-
-/* Base styling, unchanged from original */
-body {
-    background-color: #ffe6f2; /* Soft pink background */
-    font-family: 'Poppins', sans-serif;
-    color: #5a1a5b;
-    margin: 0;
-    padding: 0;
+/* Reset all App.css styles to prevent conflicts */
+.App {
+    width: 100%;
+    min-height: 100vh;
+    background-color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+  
+  /* Message styling */
+  .message {
+    padding: 1rem;
+    margin: 1rem auto;
+    max-width: 800px;
+    text-align: center;
+    color: #1e3a8a;
+  }
+  
+  /* Clean, container-free styling for auth */
+  .auth-container {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2rem;
+  }
+  
+  .auth-container h1 {
+    color: #1e3a8a;
+    margin-bottom: 0.5rem;
+  }
+  
+  .auth-container p {
+    color: #475569;
+    margin-bottom: 2rem;
+  }
+  
+  /* Auth tabs */
+  .auth-tabs {
+    display: flex;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 0.75rem;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #475569;
+    position: relative;
+  }
+  
+  .tab-btn.active {
+    color: #1e3a8a;
+    font-weight: 500;
+  }
+  
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #1e3a8a;
+  }
+  
+  /* Form styling */
+  .form-field {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-field label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #334155;
+  }
+  
+  .form-field input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: #f8fafc;
+  }
+  
+  .form-field input:focus {
+    outline: none;
+    border-color: #1e3a8a;
+  }
+  
+  /* All buttons are blue */
+  .submit-button,
+  .secondary-button,
+  .logout-button,
+  .text-button,
+  button[type="submit"] {
+    background-color: #1e3a8a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .submit-button:hover,
+  .logout-button:hover {
+    background-color: #1e40af;
+  }
+  
+  .secondary-button {
+    background-color: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+  }
+  
+  .secondary-button:hover {
+    background-color: #f1f5f9;
+  }
+  
+  .text-button {
+    background: none;
+    color: #475569;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .text-button:hover {
+    color: #1e3a8a;
+    text-decoration: underline;
+  }
+  
+  /* Processing screen - no container */
+  .processing-screen {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .loader {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid #1e3a8a;
+    animation: spin 1s linear infinite;
+    margin: 1.5rem 0;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Results screen - no container */
+  .results-screen {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+  }
+  
+  .results-screen h2 {
+    color: #1e3a8a;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  
+  .action-buttons {
     display: flex;
     justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
-
-/* Main app container, unchanged from original */
-.App {
-    text-align: center;
-    background: white;
-    padding: 40px;
-    border-radius: 15px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    width: 350px;
-}
-
-/* Heading styles - h1 unchanged from original */
-h1 {
-    font-size: 24px;
-    font-weight: 600;
-    color: #ff4d94; /* Bright pink */
-    margin-bottom: 20px;
-}
-
-/* ADDED: h2 heading style for "Verify Your Email" and dashboard sections */
-h2 {
-    font-size: 20px;
-    font-weight: 600;
-    color: #ff4d94; /* Bright pink */
-    margin-bottom: 15px;
-}
-
-/* ADDED: h3 heading style for "Hello, [name]!" in dashboard */
-h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #ff4d94; /* Bright pink */
-    margin-bottom: 10px;
-}
-
-/* ================================================
-   NEW: Authentication Tabs Styling
-   These styles handle the Register/Login tabs
-   ================================================ */
-   
-/* Container for the tabs - uses flexbox to position tabs side by side */
-.auth-tabs {
-    display: flex;                /* Creates a row of elements */
-    justify-content: center;      /* Centers the tabs horizontally */
-    margin-bottom: 20px;          /* Space between tabs and form */
-    border-radius: 25px;          /* Rounded corners for the tab group */
-    overflow: hidden;             /* Ensures children don't overflow the border radius */
-    border: 2px solid #ff99c8;    /* Light pink border around both tabs */
-}
-
-/* Individual tab button styling */
-.tab-btn {
-    background: white;            /* White background for inactive tab */
-    color: #ff4d94;               /* Pink text for inactive tab */
-    font-size: 16px;              /* Font size matching other UI elements */
-    font-weight: 600;             /* Semi-bold text for better readability */
-    padding: 10px 0;              /* Vertical padding for taller tabs */
-    margin: 0;                    /* Remove any default button margin */
-    width: 50%;                   /* Each tab takes exactly half the width */
-    border: none;                 /* Remove default button borders */
-    cursor: pointer;              /* Hand cursor on hover */
-    transition: all 0.3s ease;    /* Smooth transition for hover effects */
-}
-
-/* Active tab styling - the currently selected tab */
-.tab-btn.active {
-    background: linear-gradient(135deg, #ff66b2, #ff3385); /* Same gradient as regular buttons */
-    color: white;                 /* White text for better contrast */
-}
-
-/* Hover effect for inactive tabs */
-.tab-btn:hover:not(.active) {
-    background-color: #fff0f7;    /* Very light pink background on hover */
-}
-
-/* Form Styling - Unchanged from original */
-form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-label {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 10px 0 5px;
-}
-
-input {
-    width: 90%;
-    padding: 12px;
-    border: 2px solid #ff99c8;
-    border-radius: 10px;
-    font-size: 14px;
-    outline: none;
-    transition: all 0.3s ease-in-out;
-}
-
-input:focus {
-    border-color: #ff4d94;
-    box-shadow: 0 0 8px rgba(255, 77, 148, 0.5);
-}
-
-/* Button Styling - Base styles unchanged from original */
-button {
-    background: linear-gradient(135deg, #ff66b2, #ff3385);
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.3s ease-in-out;
-    margin-top: 15px;
-    width: 100%;
-}
-
-button:hover {
-    background: linear-gradient(135deg, #ff3385, #ff66b2);
-    transform: scale(1.05);
-}
-
-/* ADDED: Override for tab buttons to prevent scale effect */
-/* This prevents tab buttons from scaling up on hover like action buttons */
-.tab-btn:hover {
-    transform: none; /* Disable the scale effect for tab buttons */
-}
-
-/* Message Styling - Original classes */
-.success {
-    color: #00c851;
-    font-weight: bold;
-    margin-top: 15px;
-}
-
-.error {
-    color: #ff4444;
-    font-weight: bold;
-    margin-top: 15px;
-}
-
-/* ADDED: Generic message class for any type of notification */
-.message {
-    font-weight: bold;
-    margin-top: 15px;
-}
-
-/* ================================================
-   ADDED: Dashboard Styles
-   All styles related to the dashboard view
-   ================================================ */
-   
-/* Main dashboard container */
-.dashboard {
-    text-align: center;
-}
-
-/* User greeting section with bottom border */
-.user-greeting {
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #ff99c8; /* Light pink border to separate sections */
-}
-
-/* Styling for the email display beneath the greeting */
-.user-greeting p {
-    color: #5a1a5b;
-    font-size: 14px;
-}
-
-/* Main content area in the dashboard */
-.dashboard-content {
-    min-height: 60px;           /* Ensures minimum height even with little content */
-    margin-bottom: 20px;
-    font-size: 14px;
-    color: #5a1a5b;
-}
-
-/* Special styling for logout button - uses red color scheme */
-.logout-btn {
-    background: linear-gradient(135deg, #ff4444, #cc0000); /* Red gradient for logout */
-}
-
-/* Hover effect for logout button */
-.logout-btn:hover {
-    background: linear-gradient(135deg, #cc0000, #ff4444); /* Reverse gradient on hover */
-}
+    gap: 1rem;
+    margin-top: 2rem;
+  }

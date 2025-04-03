@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import Dashboard from './Dashboard';
+import MathUpload from './MathUpload';
+import OCRResults from './OCRResults';
+import ChalkWriting from './ChalkWriting';
 import './App.css';
 
 function App() {
@@ -8,32 +11,49 @@ function App() {
     // STATE MANAGEMENT
     // ==========================================
     
-    // Original input state variables
+    // User info state variables
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    // NEW: Added password state for authentication
     const [password, setPassword] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
     
-    // Original application flow state
+    // Authentication and flow state
     const [message, setMessage] = useState('');
     const [isEmailSent, setIsEmailSent] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
+    const [authMode, setAuthMode] = useState('register'); // 'register' or 'login'
     
-    // NEW: Added authentication mode state to toggle between register and login
-    // This controls which form is displayed to the user
-    const [authMode, setAuthMode] = useState('register'); // Options: 'register' or 'login'
+    // Math Mend functionality states
+    const [appState, setAppState] = useState('upload'); // 'upload', 'auth', 'processing', 'results', 'ocr-results'
+    const [uploadData, setUploadData] = useState(null);
+    const [resultData, setResultData] = useState(null);
+    
+    // OCR processing states
+    const [documentId, setDocumentId] = useState(null);
+    const [processingStatus, setProcessingStatus] = useState('idle'); // 'idle', 'processing', 'complete', 'error'
+    const [processingError, setProcessingError] = useState('');
     
     // ==========================================
     // EVENT HANDLERS
     // ==========================================
     
-    // NEW: Renamed from handleSubmit to handleRegister
-    // Now specifically handles the registration form submission
+    // Handle math document upload
+    const handleMathUpload = async (uploadFormData) => {
+        console.log("Upload data received:", uploadFormData);
+        
+        // Save upload data for later processing
+        setUploadData(uploadFormData);
+        
+        // Move to authentication state
+        setAppState('auth');
+        setMessage('Please log in or register to continue processing your document.');
+    };
+    
+    // Handle registration
     const handleRegister = async (e) => {
         e.preventDefault();
 
-        // Email validation remains the same
+        // Email validation
         const emailPattern = /@(spelman\.edu|morehouse\.edu)$/;
         if (!emailPattern.test(email)) {
             setMessage('Email must end with @spelman.edu or @morehouse.edu.');
@@ -41,35 +61,59 @@ function App() {
         }
 
         try {
-            // MODIFIED: Changed endpoint from /submit to /register
-            // NEW: Now sending password along with name and email
             const response = await axios.post('/register', { name, email, password });
             console.log("Registration API response:", response);
-            // Added fallback message in case response doesn't include a message
             setMessage(response.data.message || 'Verification code sent to your email!');
-            setIsEmailSent(true); // Show verification step
+            setIsEmailSent(true);
         } catch (error) {
-            // IMPROVED: More detailed error message with fallback
             setMessage('Error during registration: ' + (error.response?.data?.message || error.message));
         }
     };
 
-    // NEW: Added function to handle login form submission
-    // This is completely new functionality for returning users
+    // Handle login
     const handleLogin = async (e) => {
         e.preventDefault();
         
         try {
-            // Makes API call to login endpoint with email and password
             const response = await axios.post('/login', { email, password });
             console.log("Login API response:", response);
             
             if (response.data.success) {
-                // NEW: Store user name from response if available
-                setName(response.data.name || 'User'); // Use name from response or default to 'User'
+                setName(response.data.user?.user_metadata?.name || 'User');
                 setMessage('Login successful!');
-                // Skip verification for login and go straight to dashboard
-                setIsVerified(true); 
+                setIsVerified(true);
+                
+                // If we came from upload, move to processing state and upload the document
+                if (uploadData) {
+                    setAppState('processing');
+                    setProcessingStatus('uploading');
+                    
+                    // Now that we're authenticated, we can upload the document
+                    try {
+                        // Add the user ID to the form data
+                        uploadData.formData.append('userId', response.data.user.id);
+                        
+                        // Upload the document
+                        const uploadResponse = await axios.post('/api/upload-document', uploadData.formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        });
+                        
+                        console.log('Document upload response:', uploadResponse.data);
+                        setResultData(uploadResponse.data);
+                        setDocumentId(uploadResponse.data.documentId);
+                        
+                        // Process with OCR
+                        await processWithOCR(uploadResponse.data);
+                    } catch (uploadError) {
+                        console.error('Document upload error:', uploadError);
+                        setMessage('Error uploading document: ' + 
+                            (uploadError.response?.data?.message || uploadError.message));
+                        setProcessingStatus('error');
+                        setProcessingError(uploadError.message);
+                    }
+                }
             } else {
                 setMessage(response.data.message || 'Login failed. Please check your credentials.');
             }
@@ -78,49 +122,130 @@ function App() {
         }
     };
 
-    // Verify email function remains largely unchanged
+    // Verify email 
     const handleVerifyEmail = async () => {
         try {
             const response = await axios.post('/verify', { email, verificationCode });
-            // IMPROVED: Added fallback message
             setMessage(response.data.message || 'Email verified successfully!');
             
             if (response.data.success) {
-                setIsVerified(true); // Show dashboard
+                setIsVerified(true);
+                
+                // If we came from upload, move to processing state and upload the document
+                if (uploadData) {
+                    setAppState('processing');
+                    setProcessingStatus('uploading');
+                    
+                    try {
+                        // For verification, we might not have the user ID in the response
+                        // This is a placeholder - in a real app, you'd need to fetch the user ID
+                        const userId = "verified-user";
+                        uploadData.formData.append('userId', userId);
+                        
+                        // Upload the document
+                        const uploadResponse = await axios.post('/api/upload-document', uploadData.formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        });
+                        
+                        console.log('Document upload response:', uploadResponse.data);
+                        setResultData(uploadResponse.data);
+                        setDocumentId(uploadResponse.data.documentId);
+                        
+                        // Process with OCR
+                        await processWithOCR(uploadResponse.data);
+                    } catch (uploadError) {
+                        console.error('Document upload error:', uploadError);
+                        setMessage('Error uploading document: ' + 
+                            (uploadError.response?.data?.message || uploadError.message));
+                        setProcessingStatus('error');
+                        setProcessingError(uploadError.message);
+                    }
+                }
             }
         } catch (error) {
             setMessage('Invalid verification code.');
         }
     };
 
-    // MODIFIED: Logout handler now resets password state too
+    // Process the document with OCR after upload
+    const processWithOCR = async (uploadData) => {
+        try {
+            setProcessingStatus('processing');
+            setProcessingError('');
+            
+            const documentId = uploadData.documentId;
+            
+            // Call the OCR processing endpoint
+            const ocrResponse = await axios.post('/api/process-ocr', {
+                documentId,
+                userId: uploadData.userId || 'unknown'
+            });
+            
+            if (ocrResponse.data.success) {
+                setDocumentId(documentId);
+                setProcessingStatus('complete');
+                setAppState('ocr-results');
+            } else {
+                setProcessingError(ocrResponse.data.message || 'OCR processing failed');
+                setProcessingStatus('error');
+            }
+        } catch (error) {
+            console.error('OCR processing error:', error);
+            setProcessingError(error.response?.data?.message || error.message);
+            setProcessingStatus('error');
+        }
+    };
+
+    // Handle logout
     const handleLogout = () => {
-        // Reset all states except authMode (keeps the same tab active)
+        // Reset all states
         setName('');
         setEmail('');
-        setPassword(''); // NEW: Clear password on logout
+        setPassword('');
         setMessage('');
         setVerificationCode('');
         setIsEmailSent(false);
         setIsVerified(false);
+        setUploadData(null);
+        setResultData(null);
+        setDocumentId(null);
+        setProcessingStatus('idle');
+        setProcessingError('');
+        setAppState('upload');
     };
 
-    // NEW: Function to toggle between register and login modes
-    // This changes which form is displayed without changing page
+    // Handle starting a new upload
+    const handleNewUpload = () => {
+        setUploadData(null);
+        setDocumentId(null);
+        setProcessingStatus('idle');
+        setProcessingError('');
+        setAppState('upload');
+    };
+
+    // Toggle between register and login modes
     const toggleAuthMode = () => {
         setAuthMode(authMode === 'register' ? 'login' : 'register');
-        setMessage(''); // Clear any messages when switching modes
+        setMessage('');
+    };
+    
+    // Back to upload screen
+    const handleBackToUpload = () => {
+        setUploadData(null);
+        setAppState('upload');
+        setMessage('');
     };
 
     // ==========================================
     // COMPONENT RENDERING FUNCTIONS
     // ==========================================
     
-    // NEW: Separate function to render login form
-    // Keeps the JSX organized and easier to maintain
+    // Login form
     const renderLoginForm = () => (
-        <form onSubmit={handleLogin}>
-            <div>
+        <form onSubmit={handleLogin} className="auth-form">
+            <div className="form-field">
                 <label>Email</label>
                 <input
                     type="email"
@@ -129,7 +254,7 @@ function App() {
                     required
                 />
             </div>
-            <div>
+            <div className="form-field">
                 <label>Password</label>
                 <input
                     type="password"
@@ -138,15 +263,14 @@ function App() {
                     required
                 />
             </div>
-            <button type="submit">Login</button>
+            <button type="submit" className="submit-button">Login</button>
         </form>
     );
 
-    // NEW: Separate function to render registration form
-    // Similar to original form but adds password field
+    // Registration form
     const renderRegistrationForm = () => (
-        <form onSubmit={handleRegister}>
-            <div>
+        <form onSubmit={handleRegister} className="auth-form">
+            <div className="form-field">
                 <label>Name</label>
                 <input
                     type="text"
@@ -155,7 +279,7 @@ function App() {
                     required
                 />
             </div>
-            <div>
+            <div className="form-field">
                 <label>Email</label>
                 <input
                     type="email"
@@ -164,7 +288,7 @@ function App() {
                     required
                 />
             </div>
-            <div>
+            <div className="form-field">
                 <label>Password</label>
                 <input
                     type="password"
@@ -173,23 +297,90 @@ function App() {
                     required
                 />
             </div>
-            <button type="submit">Register</button>
+            <button type="submit" className="submit-button">Register</button>
         </form>
     );
 
-    // NEW: Separate function for verification form 
-    // Extracted from original code for better organization
+    // Verification form
     const renderVerificationForm = () => (
-        <div>
+        <div className="verification-form">
             <h2>Verify Your Email</h2>
-            <label>Enter Verification Code</label>
-            <input
-                type="text"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                required
+            <div className="form-field">
+                <label>Enter Verification Code</label>
+                <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    required
+                />
+            </div>
+            <button onClick={handleVerifyEmail} className="submit-button">Verify</button>
+        </div>
+    );
+    
+    // Processing screen
+    const renderProcessingScreen = () => (
+        <div className="processing-screen">
+            <h2>Processing Your Document</h2>
+            <div className="loader"></div>
+            <p>
+                {processingStatus === 'uploading' && 'Uploading your document...'}
+                {processingStatus === 'processing' && 'Analyzing your math notes with OCR and AI...'}
+                {processingStatus === 'error' && 'Error processing your document'}
+            </p>
+            {processingError && (
+                <div className="error-message">
+                    {processingError}
+                    <button 
+                        className="secondary-button"
+                        onClick={handleNewUpload}
+                        style={{ marginTop: '15px' }}
+                    >
+                        Try Again
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+    
+    // OCR Results screen
+    const renderOCRResultsScreen = () => (
+        <div className="ocr-results-screen">
+            <OCRResults
+                documentId={documentId}
+                onNewUpload={handleNewUpload}
             />
-            <button onClick={handleVerifyEmail}>Verify</button>
+        </div>
+    );
+    
+    // Results placeholder - will be replaced with actual results component
+    const renderResultsScreen = () => (
+        <div className="results-screen">
+            <h2>Analysis Complete</h2>
+            <div className="result-info">
+                <p>Your {uploadData.mathType} document has been processed.</p>
+                {uploadData.prompt && (
+                    <div className="prompt-container">
+                        <h3>Your Additional Instructions:</h3>
+                        <p>{uploadData.prompt}</p>
+                    </div>
+                )}
+                {resultData && (
+                    <div className="result-details">
+                        <h3>Document Details:</h3>
+                        <p>Document ID: {resultData.documentId}</p>
+                        <p>Filename: {resultData.fileName}</p>
+                    </div>
+                )}
+            </div>
+            <div className="action-buttons">
+                <button onClick={handleBackToUpload} className="secondary-button">
+                    Upload New Document
+                </button>
+                <button onClick={handleLogout} className="logout-button">
+                    Log Out
+                </button>
+            </div>
         </div>
     );
 
@@ -198,18 +389,20 @@ function App() {
     // ==========================================
     return (
         <div className="App">
-            {/* MODIFIED: Conditional rendering now includes more logic */}
-            {!isVerified ? (
-                <>
-                    {/* CHANGED: Heading from "Enter Your Info" to "Welcome" */}
-                    <h1>Welcome</h1>
+            {/* Conditional rendering based on app state */}
+            {appState === 'upload' && (
+                <MathUpload onSubmit={handleMathUpload} />
+            )}
+            
+            {appState === 'auth' && !isVerified && (
+                <div className="auth-container">
+                    <ChalkWriting />
+                    <p>Please log in or register to continue with your document processing</p>
                     
-                    {/* Conditional rendering: Show verification form or auth forms */}
                     {isEmailSent ? (
                         renderVerificationForm()
                     ) : (
                         <>
-                            {/* NEW: Tab navigation for switching between register and login */}
                             <div className="auth-tabs">
                                 <button 
                                     className={`tab-btn ${authMode === 'register' ? 'active' : ''}`}
@@ -225,21 +418,25 @@ function App() {
                                 </button>
                             </div>
                             
-                            {/* NEW: Conditionally render either registration or login form */}
                             {authMode === 'register' ? renderRegistrationForm() : renderLoginForm()}
+                            
+                            <div className="auth-footer">
+                                <button onClick={handleBackToUpload} className="text-button">
+                                    ← Back to Upload
+                                </button>
+                            </div>
                         </>
                     )}
-                </>
-            ) : (
-                /* Dashboard component remains the same */
-                <Dashboard 
-                    name={name} 
-                    email={email} 
-                    onLogout={handleLogout} 
-                />
+                </div>
             )}
             
-            {/* Message display remains the same */}
+            {appState === 'processing' && isVerified && renderProcessingScreen()}
+            
+            {appState === 'results' && isVerified && renderResultsScreen()}
+            
+            {appState === 'ocr-results' && isVerified && renderOCRResultsScreen()}
+            
+            {/* Message display */}
             {message && <p className="message">{message}</p>}
         </div>
     );

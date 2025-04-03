@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@700&display=swap');
+
+.chalk-board {
+  padding: 20px 0;
+  text-align: center;
+}
+
+.chalk-title {
+  font-family: 'Kalam', cursive;
+  font-size: 60px;
+  color: #1e3a8a;
+  margin: 0;
+  padding: 0;
+}
+
+.math {
+  display: inline-block;
+  opacity: 0;
+  animation: fadeIn 0.5s ease forwards, writeIn 2s ease forwards;
+  animation-delay: 0.3s;
+  position: relative;
+}
+
+.mend {
+  display: inline-block;
+  opacity: 0;
+  animation: fadeIn 0.5s ease forwards, writeIn 2s ease forwards;
+  animation-delay: 1.5s;
+  position: relative;
+  margin-left: 15px;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes writeIn {
+  0% {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+  }
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+}
